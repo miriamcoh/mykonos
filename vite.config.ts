@@ -13,6 +13,12 @@ export default defineConfig(() => {
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      // Manual registration in main.tsx (immediate: true) so a new deploy's
+      // service worker takes over right away instead of leaving an old one
+      // stuck serving its cached shell (which is what caused the blank
+      // white screen after the base-path change - the browser kept serving
+      // an old cached index.html that still pointed at /mykonos/ assets).
+      injectRegister: false,
       includeAssets: ["icons/icon-192.png", "icons/icon-512.png"],
       manifest: {
         id: base,
@@ -51,6 +57,13 @@ export default defineConfig(() => {
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
         navigateFallbackDenylist: [/^\/api\//],
+        // New SW activates and takes control immediately (no waiting on old
+        // tabs to close), and drops any precache entries a previous deploy
+        // left behind - this is what makes base-path/asset-hash changes
+        // between deploys stop leaving a stale cached shell behind.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
       },
     }),
   ],
