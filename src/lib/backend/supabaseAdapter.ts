@@ -26,6 +26,39 @@ import type {
 const BUCKET = "mykonos-files";
 
 let client: SupabaseClient | null = null;
+let cachedBaseUrl: string | null = null;
+
+/**
+ * supabase-js appends /rest/v1, /realtime/v1, /storage/v1 itself - it
+ * expects the bare project URL (https://xxx.supabase.co). Pasting the REST
+ * URL shown elsewhere in the Supabase dashboard (which already ends in
+ * /rest/v1) is a one-character-looking mistake that's easy to make, and it
+ * silently double-prefixes every request instead of failing loudly
+ * (.../rest/v1/rest/v1/table, wss://.../rest/v1/realtime/v1/websocket,
+ * .../rest/v1//storage/v1/...). Stripping it here means the app works
+ * either way instead of depending on getting the env var exactly right.
+ */
+function sanitizeSupabaseUrl(raw: string): string {
+  const cleaned = raw
+    .trim()
+    .replace(/\/+$/, "") // trailing slash(es)
+    .replace(/\/(rest|realtime|storage)\/v1$/i, ""); // accidental API suffix
+
+  if (cleaned !== raw.trim()) {
+    console.warn(
+      `[mykonos] VITE_SUPABASE_URL looked malformed ("${raw}") - using "${cleaned}" instead. ` +
+        "Fix the env var to just the project URL (https://xxxxx.supabase.co) to silence this warning."
+    );
+  }
+  return cleaned;
+}
+
+function getBaseUrl(): string {
+  if (cachedBaseUrl === null) {
+    cachedBaseUrl = sanitizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL as string);
+  }
+  return cachedBaseUrl;
+}
 
 export function isSupabaseConfigured(): boolean {
   return Boolean(
@@ -35,10 +68,7 @@ export function isSupabaseConfigured(): boolean {
 
 function getClient(): SupabaseClient {
   if (!client) {
-    client = createClient(
-      import.meta.env.VITE_SUPABASE_URL as string,
-      import.meta.env.VITE_SUPABASE_ANON_KEY as string
-    );
+    client = createClient(getBaseUrl(), import.meta.env.VITE_SUPABASE_ANON_KEY as string);
   }
   return client;
 }
@@ -208,10 +238,9 @@ function xhrUpload(
 
 const storage: CloudStorage = {
   async upload(folder, file, fileName, onProgress) {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
     const apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
     const path = `${folder}/${Date.now()}-${fileName}`;
-    const uploadUrl = `${supabaseUrl}/storage/v1/object/${BUCKET}/${path}`;
+    const uploadUrl = `${getBaseUrl()}/storage/v1/object/${BUCKET}/${path}`;
 
     await xhrUpload(uploadUrl, file, apiKey, onProgress);
     onProgress?.(100);
