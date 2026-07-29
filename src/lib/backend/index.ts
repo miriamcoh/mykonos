@@ -16,11 +16,29 @@ import { supabaseAdapter, isSupabaseConfigured } from "./supabaseAdapter";
 //                                CI/env setup doesn't need to know which
 //                                provider was actually wired up.
 // See .env.example for the required keys per provider.
-const BACKEND = (import.meta.env.VITE_BACKEND ?? "local") as
+const rawBackend = (import.meta.env.VITE_BACKEND ?? "local").trim();
+
+// Easy mistake to make: pasting the Supabase project URL into VITE_BACKEND
+// itself instead of the literal word "supabase" (and instead of
+// VITE_SUPABASE_URL). Without this, that typo silently falls all the way
+// through to the local per-device adapter with no indication why nothing
+// is syncing - self-correct instead. The URL value itself is recovered in
+// supabaseAdapter.ts's own env resolution.
+const looksLikeUrl = /^https?:\/\//i.test(rawBackend);
+const BACKEND = (looksLikeUrl ? "supabase" : rawBackend) as
   | "local"
   | "firebase"
   | "supabase"
   | "cloud";
+
+if (looksLikeUrl) {
+  console.warn(
+    `[mykonos] VITE_BACKEND is set to a URL ("${rawBackend}") instead of "supabase" - this looks like ` +
+      "the Supabase project URL got pasted into the wrong env var. Treating VITE_BACKEND as \"supabase\" " +
+      "for now, but please fix it in Vercel: VITE_BACKEND should be exactly the word supabase, and this " +
+      "URL value belongs in VITE_SUPABASE_URL instead."
+  );
+}
 
 function resolveAdapter(): CloudAdapter {
   if (BACKEND === "firebase" || BACKEND === "cloud") {

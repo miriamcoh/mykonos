@@ -59,17 +59,29 @@ function sanitizeSupabaseUrl(raw: string): string {
   return cleaned;
 }
 
+/**
+ * Recovers from a real-world misconfiguration: the Supabase project URL
+ * pasted into VITE_BACKEND instead of VITE_SUPABASE_URL (index.ts already
+ * treats VITE_BACKEND as "supabase" in that case, but the URL itself still
+ * needs to come from somewhere since VITE_SUPABASE_URL is empty).
+ */
+function rawSupabaseUrlEnv(): string {
+  const primary = ((import.meta.env.VITE_SUPABASE_URL as string) ?? "").trim();
+  if (primary) return primary;
+  const backendVal = ((import.meta.env.VITE_BACKEND as string) ?? "").trim();
+  if (/^https?:\/\//i.test(backendVal)) return backendVal;
+  return primary;
+}
+
 function getBaseUrl(): string {
   if (cachedBaseUrl === null) {
-    cachedBaseUrl = sanitizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL as string);
+    cachedBaseUrl = sanitizeSupabaseUrl(rawSupabaseUrlEnv());
   }
   return cachedBaseUrl;
 }
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(
-    import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
-  );
+  return Boolean(rawSupabaseUrlEnv() && import.meta.env.VITE_SUPABASE_ANON_KEY);
 }
 
 function getClient(): SupabaseClient {
