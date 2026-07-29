@@ -66,6 +66,22 @@ function sanitizeSupabaseUrl(raw: string): string {
   return cleaned;
 }
 
+// A real Supabase project URL is always some-ref.supabase.co (or a custom
+// domain) - i.e. it has a dot in it. Values like the bare word "supabase"
+// (which happened in practice: someone put the VITE_BACKEND value into the
+// VITE_SUPABASE_URL field instead) have nowhere to go but a guaranteed
+// ERR_NAME_NOT_RESOLVED loop if treated as a real host. Reject those
+// outright instead of dutifully turning them into "https://supabase" and
+// hammering a hostname that can never exist.
+const RESERVED_BACKEND_WORDS = new Set(["local", "firebase", "supabase", "cloud"]);
+
+function isPlausibleSupabaseUrlValue(candidate: string): boolean {
+  if (!candidate) return false;
+  const stripped = candidate.replace(/^https?:\/\//i, "").toLowerCase();
+  if (RESERVED_BACKEND_WORDS.has(stripped)) return false;
+  return stripped.includes("."); // every real Supabase host has a dot
+}
+
 /**
  * Recovers from a real-world misconfiguration: the Supabase project URL
  * pasted into VITE_BACKEND instead of VITE_SUPABASE_URL (index.ts already
@@ -74,10 +90,17 @@ function sanitizeSupabaseUrl(raw: string): string {
  */
 function rawSupabaseUrlEnv(): string {
   const primary = ((import.meta.env.VITE_SUPABASE_URL as string) ?? "").trim();
-  if (primary) return primary;
+  if (isPlausibleSupabaseUrlValue(primary)) return primary;
+  if (primary) {
+    console.error(
+      `[mykonos] VITE_SUPABASE_URL is set to "${primary}", which isn't a real Supabase project URL ` +
+        '(it should look like "https://xxxxx.supabase.co") - treating it as not configured instead of ' +
+        "endlessly trying to reach a host that can't possibly exist. Fix the value in Vercel."
+    );
+  }
   const backendVal = ((import.meta.env.VITE_BACKEND as string) ?? "").trim();
-  if (/^https?:\/\//i.test(backendVal)) return backendVal;
-  return primary;
+  if (isPlausibleSupabaseUrlValue(backendVal)) return backendVal;
+  return "";
 }
 
 function getBaseUrl(): string {
