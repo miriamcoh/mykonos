@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
     <meta name="theme-color" content="#1E6FD9" />
     <meta name="description" content="אפליקציית הטיול המשותפת שלנו למיקונוס" />
-    <link rel="icon" href="/icons/icon-192.png" />
-    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" href="%BASE_URL%icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="%BASE_URL%icons/icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="מיקונוס" />
@@ -17,6 +17,35 @@
       rel="stylesheet"
     />
     <title>טסים למיקונוס</title>
+    <script>
+      // Counterpart to public/404.html - decodes the path GitHub Pages
+      // redirected here and restores it via the History API before React
+      // Router mounts, so deep links / refreshes land on the right screen.
+      (function () {
+        var l = window.location;
+        if (l.search[1] === "p") {
+          var decoded = l.search
+            .slice(1)
+            .split("&")
+            .map(function (s) {
+              return s.replace(/~and~/g, "&");
+            })
+            .reduce(function (acc, cur) {
+              var kv = cur.split(/=(.*)/);
+              acc[kv[0]] = kv[1];
+              return acc;
+            }, {});
+          window.history.replaceState(
+            null,
+            "",
+            l.pathname.slice(0, -1) +
+              (decoded.p || "") +
+              (decoded.q ? "?" + decoded.q : "") +
+              l.hash
+          );
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

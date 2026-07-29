@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>טסים למיקונוס</title>
+    <script>
+      // GitHub Pages has no server-side rewrite for client-side routes, so a
+      // refresh/deep-link on e.g. /mykonos/expenses hits this 404 page. We
+      // re-encode the path into a query string and redirect to index.html,
+      // which decodes it back via history.replaceState (see index.html).
+      var pathSegmentsToKeep = 1; // keep "/mykonos"
+      var l = window.location;
+      var path = l.pathname
+        .split("/")
+        .slice(0, 1 + pathSegmentsToKeep)
+        .join("/");
+      var rest = l.pathname
+        .split("/")
+        .slice(1 + pathSegmentsToKeep)
+        .join("/");
+      l.replace(
+        path +
+          "/?p=/" +
+          rest.replace(/&/g, "~and~") +
+          (l.search ? "&q=" + l.search.slice(1).replace(/&/g, "~and~") : "") +
+          l.hash
+      );
+    </script>
+  </head>
+  <body></body>
+</html>
