@@ -24,6 +24,12 @@ import type {
 } from "./types";
 
 const BUCKET = "mykonos-files";
+// Safety net for cross-device sync: some Supabase projects have Realtime
+// silently misconfigured (RLS/publication/replication issues that don't
+// surface as a clean client-side error). Realtime is still the fast path
+// when it works, but polling guarantees "User B eventually sees User A's
+// change" even if the realtime channel never fires a single event.
+const POLL_INTERVAL_MS = 5_000;
 
 let client: SupabaseClient | null = null;
 let cachedBaseUrl: string | null = null;
@@ -108,6 +114,7 @@ function makeCollection<T extends WithId>(name: string): CloudCollection<T> {
           if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || err) {
             // Usually means Realtime isn't enabled for this table - run
             // supabase-setup.sql (alter publication supabase_realtime add table ...).
+            // Not fatal: the poll below still keeps this table in sync.
             console.error(
               `[mykonos] Supabase realtime subscription problem on "${table}": ${status}`,
               err
@@ -115,8 +122,11 @@ function makeCollection<T extends WithId>(name: string): CloudCollection<T> {
           }
         });
 
+      const pollId = window.setInterval(load, POLL_INTERVAL_MS);
+
       const unsub: Unsubscribe = () => {
         cancelled = true;
+        window.clearInterval(pollId);
         sb.removeChannel(channel);
       };
       return unsub;
@@ -236,10 +246,26 @@ function xhrUpload(
   });
 }
 
+/**
+ * Supabase Storage keys must be valid S3-style object keys - non-ASCII
+ * characters (Hebrew filenames like "הורדה.jfif" being the exact case QA
+ * hit) get rejected with HTTP 400 "Invalid key". The original filename is
+ * never needed for the storage key itself (every caller keeps the
+ * human-readable name in a separate `name`/`fileName` field on the record
+ * for display), so the key is just a random id + a sanitized extension.
+ */
+function safeStorageFileName(originalName: string): string {
+  const dot = originalName.lastIndexOf(".");
+  const rawExt = dot > -1 ? originalName.slice(dot + 1) : "";
+  const ext = rawExt.replace(/[^a-zA-Z0-9]/g, "").toLowerCase().slice(0, 10);
+  const id = crypto.randomUUID();
+  return ext ? `${id}.${ext}` : id;
+}
+
 const storage: CloudStorage = {
   async upload(folder, file, fileName, onProgress) {
     const apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-    const path = `${folder}/${Date.now()}-${fileName}`;
+    const path = `${folder}/${safeStorageFileName(fileName)}`;
     const uploadUrl = `${getBaseUrl()}/storage/v1/object/${BUCKET}/${path}`;
 
     await xhrUpload(uploadUrl, file, apiKey, onProgress);
