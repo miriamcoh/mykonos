@@ -94,6 +94,10 @@ interface CloudAdapter {
 - `supabase-setup.sql` בשורש הפרויקט - סקריפט הרצה-חד-פעמית שיוצר את כל הטבלאות/bucket/realtime ב-Supabase.
 - רוצים לארח במקום אחר (Firebase Hosting / Netlify / Vercel, בלי תת-נתיב)? `BASE_PATH=/ npm run build`.
 
+### חיווי חיבור לענן
+
+ה-Header מציג תג קטן ("מסונכרן" / "מקומי בלבד") שמראה בדיוק על מה כרגע רצה האפליקציה - כדי שמצב "לא מוגדר ענן" לא יהיה תקלה שקטה שאף אחת לא שמה לב אליה. תלוי ב-`isCloudBackend` מ-`src/lib/backend/index.ts`.
+
 ### הוספת חנות חדשה (feature store) חדשה
 
 ```ts
@@ -107,10 +111,10 @@ export const useMyFeatureStore = createCloudStore<MyType>("myCollectionName");
 | מסך | נתיב | תיאור |
 |---|---|---|
 | כניסה | `/` (לפני login) | בחירת שם → פופאפ לו״ז היום מיידי |
-| לו״ז | `/` | CRUD אירועים: שעה, מיקום, תמונות, תזכורת push (`Notification API`) |
+| לו״ז | `/` | לוח שנה חודשי (`components/ui/Calendar.tsx`) לבחירת יום, CRUD אירועים: שעה, מיקום, תמונות, תזכורת push (`Notification API`) |
 | הוצאות | `/expenses` | מי שילמה, סה״כ, מאזן אישי, אלגוריתם התחשבנות מינימלי (מי חייבת למי) |
 | מסמכים | `/documents` | העלאה/שם/סוג/הורדה - כרטיסים, דרכונים, מלון, ביטוח |
-| מיקום | `/location` | שיתוף מיקום + כפתור פאניקה - `navigator.geolocation` + קישור למפות גוגל |
+| מיקום | `/location` | שיתוף מיקום חי (`watchPosition`, ניתן לעצירה) + כפתור פאניקה חד-פעמי + קישור למפות גוגל |
 | ציוד | `/checklist` | רשימת ציוד משותפת עם הקצאה לבנות ספציפיות + מעקב אריזה |
 | גלריה | `/gallery` | העלאה המונית (concurrency-controlled), גריד, הורדה למכשיר לכל תמונה |
 | הצבעות | `/polls` | יצירת סקר, הצבעה, תוצאות בזמן אמת |
@@ -119,3 +123,4 @@ export const useMyFeatureStore = createCloudStore<MyType>("myCollectionName");
 
 - **תזכורות (Reminders)**: כרגע ה-timers רצים בזיכרון בזמן שהטאב/אפליקציה פתוחים (`setTimeout`). זה מתאים לשימוש כ-PWA פתוח. Push אמיתי ברקע (גם כשהאפליקציה סגורה) דורש שרת + Push API - השלב הבא הטבעי אחרי חיבור Firebase (FCM) או Supabase Edge Functions.
 - **אבטחה**: זו אפליקציה פרטית לקבוצה סגורה של 5 בנות עם "login" מבוסס בחירת שם בלבד (בלי סיסמה). כשמחברים Firebase/Supabase לפרודקשן אמיתי, מומלץ להוסיף כלל אבטחה (Firestore Security Rules / RLS ב-Supabase) שמגביל גישה, ואפשר גם Firebase Anonymous Auth כדי שכל "כניסה" תהיה גם session אמיתי בצד השרת.
+- **התראה על שיתוף מיקום**: כשמישהי לוחצת "שיתוף מיקום", כל מכשיר אחר שבו האפליקציה **פתוחה** ומחוברת ל-sync (מקומי בין טאבים, או ענן בין מכשירים) מזהה את השיתוף החדש דרך ה-subscription הקיים ומפעיל התראה מקומית משלו (`Notification API`) - זו לא Push אמיתי בין מכשירים (זה ידרוש שרת + Push API + service worker subscriptions), אלא "כל מכשיר מודיע לעצמו" כשהוא רואה עדכון relevant דרך ה-realtime sync. הבדל חשוב: זה עובד רק כשהאפליקציה פתוחה/רצה ברקע בטאב, לא כשהיא סגורה לגמרי.

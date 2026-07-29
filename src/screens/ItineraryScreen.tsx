@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
-import { Card, EmptyState, Chip } from "@/components/ui/Misc";
+import { Card, EmptyState } from "@/components/ui/Misc";
+import { Calendar } from "@/components/ui/Calendar";
 import { Button, FAB } from "@/components/ui/Button";
 import { Field, Select, TextArea, TextInput } from "@/components/ui/Field";
 import { Sheet, ConfirmDialog } from "@/components/ui/Sheet";
@@ -59,25 +60,18 @@ export default function ItineraryScreen() {
     armReminders(items, (id) => update(id, { reminder: { ...(items.find((e) => e.id === id)?.reminder ?? { enabled: true, minutesBefore: 30 }), firedAt: new Date().toISOString() } }));
   }, [items, update]);
 
-  const dates = useMemo(() => {
-    const set = new Set(items.map((e) => e.date));
-    set.add(todayStr());
-    return [...set].sort();
-  }, [items]);
+  const eventDates = useMemo(() => new Set(items.map((e) => e.date)), [items]);
 
   const dayEvents = eventsForDate(items, selectedDate);
 
   return (
     <AppShell title={`לו״ז - ${formatDayLabel(selectedDate)}`}>
-      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1">
-        {dates.map((d) => (
-          <Chip key={d} active={d === selectedDate} onClick={() => setSelectedDate(d)}>
-            {new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short" }).format(
-              new Date(d)
-            )}
-          </Chip>
-        ))}
-      </div>
+      <Calendar
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+        eventDates={eventDates}
+        todayDate={todayStr()}
+      />
 
       {dayEvents.length === 0 ? (
         <EmptyState

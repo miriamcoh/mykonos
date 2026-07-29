@@ -20,6 +20,21 @@ import { formatMoney } from "@/lib/format";
 
 const CATEGORIES: ExpenseCategory[] = ["אוכל", "לינה", "תחבורה", "בילויים", "קניות", "אחר"];
 
+/**
+ * Strips everything that isn't a digit or a decimal point (currency symbols,
+ * letters, spaces, thousands separators...) and collapses to a single
+ * decimal point. Deliberately NOT using <input type="number"> for amount:
+ * per the HTML spec, a number input's `.value` silently becomes "" the
+ * moment its content isn't a strictly valid float (e.g. anything pasted or
+ * autofilled with a currency symbol/letter in it) - which was quietly
+ * disabling the submit button below even though the field looked filled.
+ */
+function sanitizeAmountInput(raw: string): string {
+  const cleaned = raw.replace(/[^\d.]/g, "");
+  const [whole, ...rest] = cleaned.split(".");
+  return rest.length ? `${whole}.${rest.join("")}` : whole;
+}
+
 export default function ExpensesScreen() {
   const { items, init, add } = useExpenseStore();
   const [formOpen, setFormOpen] = useState(false);
@@ -147,6 +162,14 @@ function ExpenseFormSheet({
     setSplit((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
   }
 
+  const parsedAmount = Number(amount);
+  const isValid =
+    title.trim().length > 0 &&
+    amount.length > 0 &&
+    Number.isFinite(parsedAmount) &&
+    parsedAmount > 0 &&
+    split.length > 0;
+
   return (
     <Sheet open={open} onClose={onClose} title="הוצאה חדשה">
       <Field label="על מה שילמתן?">
@@ -155,10 +178,10 @@ function ExpenseFormSheet({
       <div className="grid grid-cols-2 gap-3">
         <Field label="סכום">
           <TextInput
-            type="number"
+            type="text"
             inputMode="decimal"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => setAmount(sanitizeAmountInput(e.target.value))}
             placeholder="0"
           />
         </Field>
@@ -201,12 +224,13 @@ function ExpenseFormSheet({
       <Button
         fullWidth
         size="lg"
-        disabled={!title || !amount || Number(amount) <= 0 || split.length === 0}
+        disabled={!isValid}
         onClick={() =>
+          isValid &&
           onSave(
             newExpense({
-              title,
-              amount: Number(amount),
+              title: title.trim(),
+              amount: parsedAmount,
               currency,
               paidBy: paidBy as (typeof GIRLS)[number],
               category,

@@ -122,6 +122,16 @@ export const CheckIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M20 6 9 17l-5-5" />
   </svg>
 );
+export const ChevronStartIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="m15 6-6 6 6 6" />
+  </svg>
+);
+export const ChevronEndIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="m9 6 6 6-6 6" />
+  </svg>
+);
 export const LogoutIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

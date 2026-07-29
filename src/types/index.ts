@@ -93,8 +93,11 @@ export interface LocationPing {
   lng: number;
   accuracy: number | null;
   isPanic: boolean;
+  /** True while this girl has an active "live share" session running (watchPosition). */
+  isLive: boolean;
   message?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 // ---------- Checklist ----------

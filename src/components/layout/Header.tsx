@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/ui/Avatar";
 import { LogoutIcon } from "@/components/ui/Icons";
+import { SyncBadge } from "@/components/ui/SyncBadge";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export function Header({ title }: { title: string }) {
@@ -9,7 +10,10 @@ export function Header({ title }: { title: string }) {
     <header className="sticky top-0 z-20 bg-aegean-500 text-white pt-[env(safe-area-inset-top)]">
       <div className="flex items-center justify-between px-4 py-3.5">
         <div>
-          <p className="text-[11px] text-aegean-100/80 font-medium">טסים למיקונוס</p>
+          <div className="flex items-center gap-2">
+            <p className="text-[11px] text-aegean-100/80 font-medium">טסים למיקונוס</p>
+            <SyncBadge />
+          </div>
           <h1 className="text-lg font-bold leading-tight">{title}</h1>
         </div>
         {user && (
