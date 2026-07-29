@@ -118,6 +118,7 @@ function UploadSheet({
   const [name, setName] = useState("");
   const [kind, setKind] = useState<DocumentKind>("ticket");
   const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -125,14 +126,22 @@ function UploadSheet({
       setName("");
       setKind("ticket");
       setProgress(null);
+      setError(null);
     }
   }, [open]);
 
   async function handleUpload() {
     if (!file || !user) return;
     setProgress(0);
-    const doc = await uploadDocument(file, name || file.name, kind, user.name, setProgress);
-    onDone(doc);
+    setError(null);
+    try {
+      const doc = await uploadDocument(file, name || file.name, kind, user.name, setProgress);
+      onDone(doc);
+    } catch (err) {
+      console.error("[mykonos] Failed to upload document:", err);
+      setError(err instanceof Error ? err.message : "ההעלאה נכשלה - נסו שוב");
+      setProgress(null);
+    }
   }
 
   return (
@@ -175,6 +184,9 @@ function UploadSheet({
         <div className="mb-4">
           <ProgressBar pct={progress} />
         </div>
+      )}
+      {error && (
+        <Card className="p-3 mb-4 bg-red-50 border-none text-red-600 text-sm">{error}</Card>
       )}
 
       <Button fullWidth size="lg" disabled={!file || progress !== null} onClick={handleUpload}>

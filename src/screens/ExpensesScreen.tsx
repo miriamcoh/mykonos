@@ -38,6 +38,8 @@ function sanitizeAmountInput(raw: string): string {
 export default function ExpensesScreen() {
   const { items, init, add } = useExpenseStore();
   const [formOpen, setFormOpen] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => init(), [init]);
 
@@ -121,10 +123,26 @@ export default function ExpensesScreen() {
       <FAB label="הוספת הוצאה" icon={<PlusIcon />} onClick={() => setFormOpen(true)} />
       <ExpenseFormSheet
         open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSave={async (e) => {
-          await add(e);
+        saving={saving}
+        error={saveError}
+        onClose={() => {
+          setSaveError(null);
           setFormOpen(false);
+        }}
+        onSave={async (e) => {
+          setSaving(true);
+          setSaveError(null);
+          try {
+            await add(e);
+            setFormOpen(false);
+          } catch (err) {
+            console.error("[mykonos] Failed to save expense:", err);
+            setSaveError(
+              err instanceof Error ? err.message : "השמירה נכשלה - נסו שוב בעוד רגע"
+            );
+          } finally {
+            setSaving(false);
+          }
         }}
       />
     </AppShell>
@@ -135,10 +153,14 @@ function ExpenseFormSheet({
   open,
   onClose,
   onSave,
+  saving,
+  error,
 }: {
   open: boolean;
   onClose: () => void;
   onSave: (e: Expense) => void;
+  saving: boolean;
+  error: string | null;
 }) {
   const { user } = useAuthStore();
   const [title, setTitle] = useState("");
@@ -221,12 +243,17 @@ function ExpenseFormSheet({
         </div>
       </Field>
 
+      {error && (
+        <Card className="p-3 mb-4 bg-red-50 border-none text-red-600 text-sm">{error}</Card>
+      )}
+
       <Button
         fullWidth
         size="lg"
-        disabled={!isValid}
+        disabled={!isValid || saving}
         onClick={() =>
           isValid &&
+          !saving &&
           onSave(
             newExpense({
               title: title.trim(),
@@ -239,7 +266,7 @@ function ExpenseFormSheet({
           )
         }
       >
-        הוספת הוצאה
+        {saving ? "שומרת..." : "הוספת הוצאה"}
       </Button>
     </Sheet>
   );

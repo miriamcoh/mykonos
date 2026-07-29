@@ -120,8 +120,12 @@ export default function ChecklistScreen() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSave={async (item) => {
-          await add(item);
-          setFormOpen(false);
+          try {
+            await add(item);
+            setFormOpen(false);
+          } catch (err) {
+            console.error("[mykonos] Failed to save checklist item:", err);
+          }
         }}
       />
     </AppShell>

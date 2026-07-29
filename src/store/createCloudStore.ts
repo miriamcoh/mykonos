@@ -28,13 +28,28 @@ export function createCloudStore<T extends WithId>(collectionName: string) {
       col.subscribe((items) => set({ items, loading: false }));
     },
     add: async (item) => {
-      await col.add(item);
+      try {
+        await col.add(item);
+      } catch (err) {
+        console.error(`[mykonos] "${collectionName}" add failed:`, err);
+        throw err;
+      }
     },
     update: async (id, patch) => {
-      await col.update(id, patch);
+      try {
+        await col.update(id, patch);
+      } catch (err) {
+        console.error(`[mykonos] "${collectionName}" update failed:`, err);
+        throw err;
+      }
     },
     remove: async (id) => {
-      await col.remove(id);
+      try {
+        await col.remove(id);
+      } catch (err) {
+        console.error(`[mykonos] "${collectionName}" remove failed:`, err);
+        throw err;
+      }
     },
   }));
 }

@@ -53,6 +53,8 @@ export default function ItineraryScreen() {
   const [editing, setEditing] = useState<ItineraryEvent | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => init(), [init]);
 
@@ -106,16 +108,32 @@ export default function ItineraryScreen() {
 
       <EventFormSheet
         open={formOpen}
-        onClose={() => setFormOpen(false)}
+        saving={saving}
+        error={saveError}
+        onClose={() => {
+          setSaveError(null);
+          setFormOpen(false);
+        }}
         defaultDate={selectedDate}
         editing={editing}
         onSave={async (data) => {
-          if (editing) {
-            await update(editing.id, { ...data, updatedAt: new Date().toISOString() });
-          } else if (user) {
-            await add(newItineraryEvent(data, user.name));
+          setSaving(true);
+          setSaveError(null);
+          try {
+            if (editing) {
+              await update(editing.id, { ...data, updatedAt: new Date().toISOString() });
+            } else if (user) {
+              await add(newItineraryEvent(data, user.name));
+            }
+            setFormOpen(false);
+          } catch (err) {
+            console.error("[mykonos] Failed to save itinerary event:", err);
+            setSaveError(
+              err instanceof Error ? err.message : "השמירה נכשלה - נסו שוב בעוד רגע"
+            );
+          } finally {
+            setSaving(false);
           }
-          setFormOpen(false);
         }}
       />
 
@@ -204,12 +222,16 @@ function EventFormSheet({
   defaultDate,
   editing,
   onSave,
+  saving,
+  error,
 }: {
   open: boolean;
   onClose: () => void;
   defaultDate: string;
   editing: ItineraryEvent | null;
   onSave: (data: Partial<ItineraryEvent> & Pick<ItineraryEvent, "title" | "time" | "date" | "location">) => void;
+  saving: boolean;
+  error: string | null;
 }) {
   const { user } = useAuthStore();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -223,8 +245,10 @@ function EventFormSheet({
   const [reminderOn, setReminderOn] = useState(false);
   const [minutesBefore, setMinutesBefore] = useState(30);
   const [uploading, setUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   useEffect(() => {
+    setPhotoError(null);
     if (editing) {
       setTitle(editing.title);
       setTime(editing.time);
@@ -251,11 +275,15 @@ function EventFormSheet({
   async function handleFiles(files: FileList | null) {
     if (!files || !user) return;
     setUploading(true);
+    setPhotoError(null);
     try {
       for (const file of Array.from(files)) {
         const photo = await uploadItineraryPhoto(file, user.name);
         setPhotos((prev) => [...prev, photo]);
       }
+    } catch (err) {
+      console.error("[mykonos] Failed to upload itinerary photo:", err);
+      setPhotoError(err instanceof Error ? err.message : "העלאת התמונה נכשלה");
     } finally {
       setUploading(false);
     }
@@ -317,6 +345,7 @@ function EventFormSheet({
           </button>
         </div>
         {uploading && <p className="text-xs text-aegean-400 mt-1.5">מעלה תמונה...</p>}
+        {photoError && <p className="text-xs text-red-500 mt-1.5">{photoError}</p>}
         <input
           ref={fileRef}
           type="file"
@@ -360,10 +389,14 @@ function EventFormSheet({
         )}
       </Card>
 
+      {error && (
+        <Card className="p-3 mb-4 bg-red-50 border-none text-red-600 text-sm">{error}</Card>
+      )}
+
       <Button
         fullWidth
         size="lg"
-        disabled={!title || !time || !date}
+        disabled={!title || !time || !date || saving}
         onClick={() =>
           onSave({
             title,
@@ -377,7 +410,7 @@ function EventFormSheet({
           })
         }
       >
-        {editing ? "עדכון אירוע" : "הוספה ללו״ז"}
+        {saving ? "שומרת..." : editing ? "עדכון אירוע" : "הוספה ללו״ז"}
       </Button>
     </Sheet>
   );

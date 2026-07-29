@@ -91,8 +91,12 @@ export default function PollsScreen() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSave={async (poll) => {
-          await add(poll);
-          setFormOpen(false);
+          try {
+            await add(poll);
+            setFormOpen(false);
+          } catch (err) {
+            console.error("[mykonos] Failed to save poll:", err);
+          }
         }}
       />
     </AppShell>

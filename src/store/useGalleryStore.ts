@@ -35,8 +35,8 @@ export async function uploadPhotosToGallery(
         uploadProgress: 0,
         status: "uploading",
       };
-      await add(placeholder);
       try {
+        await add(placeholder);
         const { url, path } = await backend.storage.upload(
           "gallery",
           file,
@@ -44,8 +44,11 @@ export async function uploadPhotosToGallery(
           (pct) => update(id, { uploadProgress: pct })
         );
         await update(id, { url, path, uploadProgress: 100, status: "done" });
-      } catch {
-        await update(id, { status: "error" });
+      } catch (err) {
+        console.error(`[mykonos] Gallery upload failed for "${file.name}":`, err);
+        await update(id, { status: "error" }).catch((updateErr) =>
+          console.error(`[mykonos] Failed to mark "${file.name}" as error:`, updateErr)
+        );
       }
     }
   }

@@ -96,20 +96,37 @@ export default function LocationScreen() {
         if (!isFirstFix && now - lastSentAtRef.current < LIVE_UPDATE_INTERVAL_MS) return;
         lastSentAtRef.current = now;
 
-        if (isFirstFix) {
-          await add(pingFromPosition(user.name, pos, { isPanic: false, isLive: true, id: pingId }));
+        try {
+          if (isFirstFix) {
+            await add(pingFromPosition(user.name, pos, { isPanic: false, isLive: true, id: pingId }));
+            setStarting(false);
+            setIsSharingLive(true);
+          } else {
+            await update(pingId, {
+              lat: pos.lat,
+              lng: pos.lng,
+              accuracy: pos.accuracy,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        } catch (err) {
+          // Without this catch, a failed insert/update here (e.g. Supabase
+          // RLS blocking the write) left the button stuck on "מתחילה..."
+          // forever with zero feedback - watchPosition's success callback
+          // isn't awaited by the browser, so a throw here was an invisible
+          // unhandled rejection instead of a visible error.
+          console.error("[mykonos] Live location share failed:", err);
+          setError(
+            err instanceof Error
+              ? `שיתוף המיקום נכשל: ${err.message}`
+              : "שיתוף המיקום נכשל - נסו שוב"
+          );
           setStarting(false);
-          setIsSharingLive(true);
-        } else {
-          await update(pingId, {
-            lat: pos.lat,
-            lng: pos.lng,
-            accuracy: pos.accuracy,
-            updatedAt: new Date().toISOString(),
-          });
+          stopLiveShare();
         }
       },
-      () => {
+      (err) => {
+        console.error("[mykonos] Geolocation watch error:", err);
         setError("לא הצלחנו לקבל מיקום - ודאו שהרשאת המיקום מאושרת בדפדפן");
         setStarting(false);
         stopLiveShare();
@@ -124,8 +141,15 @@ export default function LocationScreen() {
       watchIdRef.current = null;
     }
     if (livePingIdRef.current) {
-      await update(livePingIdRef.current, { isLive: false, updatedAt: new Date().toISOString() });
+      const pingId = livePingIdRef.current;
       livePingIdRef.current = null;
+      try {
+        await update(pingId, { isLive: false, updatedAt: new Date().toISOString() });
+      } catch (err) {
+        // Local watch is already stopped either way - just make sure the
+        // "still live" flag doesn't stay stuck for other girls if this fails.
+        console.error("[mykonos] Failed to flip live ping to stopped:", err);
+      }
     }
     setIsSharingLive(false);
     setStarting(false);
@@ -138,8 +162,11 @@ export default function LocationScreen() {
     try {
       const ping = await broadcastLocation(user.name, true, "צריכה עזרה / נקודת מפגש");
       await add(ping);
-    } catch {
-      setError("לא הצלחנו לקבל מיקום - ודאו שהרשאת המיקום מאושרת בדפדפן");
+    } catch (err) {
+      console.error("[mykonos] Failed to broadcast panic location:", err);
+      setError(
+        err instanceof Error ? `שיתוף המיקום נכשל: ${err.message}` : "שיתוף המיקום נכשל - נסו שוב"
+      );
     } finally {
       setSendingPanic(false);
     }
