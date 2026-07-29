@@ -3,14 +3,10 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 
-// GitHub Pages serves this project at /mykonos/ (a project site, not a user
-// site), so every absolute asset/route reference needs that prefix. Only
-// applied to production builds - `npm run dev` keeps serving at "/" for a
-// plain, unprefixed http://localhost:5173. Override with BASE_PATH=/ when
-// building for a host that serves from the domain root (Firebase Hosting,
-// Netlify, Vercel, ...).
-export default defineConfig(({ command }) => {
-  const base = process.env.BASE_PATH ?? (command === "build" ? "/mykonos/" : "/");
+// Serves from the domain root - correct for Vercel (and Netlify/Firebase
+// Hosting). Override with BASE_PATH if a future host needs a sub-path.
+export default defineConfig(() => {
+  const base = process.env.BASE_PATH ?? "/";
   return {
   base,
   plugins: [
