@@ -45,10 +45,17 @@ let cachedBaseUrl: string | null = null;
  * either way instead of depending on getting the env var exactly right.
  */
 function sanitizeSupabaseUrl(raw: string): string {
-  const cleaned = raw
+  let cleaned = raw
     .trim()
     .replace(/\/+$/, "") // trailing slash(es)
     .replace(/\/(rest|realtime|storage)\/v1$/i, ""); // accidental API suffix
+
+  // Copying just the "xxxxx.supabase.co" part (no scheme) is another easy
+  // mistake - createClient() throws "Invalid supabaseUrl" and crashes with
+  // nothing on screen if this isn't caught, so recover instead of failing.
+  if (cleaned && !/^https?:\/\//i.test(cleaned)) {
+    cleaned = `https://${cleaned}`;
+  }
 
   if (cleaned !== raw.trim()) {
     console.warn(
