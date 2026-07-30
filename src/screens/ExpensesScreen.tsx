@@ -4,7 +4,7 @@ import { Card, Chip, EmptyState, SectionTitle } from "@/components/ui/Misc";
 import { Button, FAB } from "@/components/ui/Button";
 import { Field, Select, TextInput } from "@/components/ui/Field";
 import { Sheet } from "@/components/ui/Sheet";
-import { PlusIcon, WalletIcon } from "@/components/ui/Icons";
+import { PlusIcon, WalletIcon, TrashIcon } from "@/components/ui/Icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { GIRLS } from "@/types";
 import type { Expense, ExpenseCategory } from "@/types";
@@ -36,10 +36,13 @@ function sanitizeAmountInput(raw: string): string {
 }
 
 export default function ExpensesScreen() {
-  const { items, init, add } = useExpenseStore();
+  const { items, init, add, remove } = useExpenseStore();
   const [formOpen, setFormOpen] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   useEffect(() => init(), [init]);
 
@@ -99,7 +102,7 @@ export default function ExpensesScreen() {
       {items.length === 0 ? (
         <EmptyState icon={<WalletIcon width={36} height={36} />} title="אין עדיין הוצאות" />
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 mb-5">
           {[...items]
             .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
             .map((e) => (
@@ -115,8 +118,61 @@ export default function ExpensesScreen() {
                   <p className="font-bold text-aegean-800">{formatMoney(e.amount, e.currency)}</p>
                   <p className="text-[10px] text-aegean-300">{e.category}</p>
                 </div>
+                <button
+                  onClick={() => setConfirmDelete(e.id)}
+                  disabled={deletingId === e.id}
+                  className="shrink-0 p-2 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                  aria-label="מחיקה"
+                >
+                  <TrashIcon className="w-5 h-5 text-red-500" />
+                </button>
               </Card>
             ))}
+        </div>
+      )}
+
+      {deleteError && (
+        <Card className="p-3 mb-4 bg-red-50 border-none text-red-600 text-sm">{deleteError}</Card>
+      )}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-end z-50" onClick={() => setConfirmDelete(null)}>
+          <div className="w-full bg-white rounded-t-2xl p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-semibold text-aegean-900 text-right">האם להסיר הוצאה זו?</h2>
+            <p className="text-sm text-aegean-600 text-right">לא ניתן לשחזר הוצאה שהוסרה.</p>
+            <div className="flex gap-3">
+              <Button
+                fullWidth
+                variant="ghost"
+                onClick={() => setConfirmDelete(null)}
+              >
+                ביטול
+              </Button>
+              <Button
+                fullWidth
+                variant="danger"
+                disabled={deletingId !== null}
+                onClick={async () => {
+                  const id = confirmDelete;
+                  setConfirmDelete(null);
+                  setDeletingId(id);
+                  setDeleteError(null);
+                  try {
+                    await remove(id);
+                  } catch (err) {
+                    console.error("[mykonos] Failed to delete expense:", err);
+                    setDeleteError(
+                      err instanceof Error ? err.message : "המחיקה נכשלה - נסו שוב בעוד רגע"
+                    );
+                  } finally {
+                    setDeletingId(null);
+                  }
+                }}
+              >
+                {deletingId ? "מוחק..." : "הסרה"}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
