@@ -106,29 +106,27 @@ export default function ExpensesScreen() {
           {[...items]
             .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
             .map((e) => (
-              <div key={e.id} className="relative group">
-                <Card className="p-3.5 flex items-center gap-3">
-                  <Avatar name={e.paidBy} size={32} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-aegean-900 truncate">{e.title}</p>
-                    <p className="text-xs text-aegean-400">
-                      {e.paidBy} שילמה · מתחלק בין {e.splitBetween.length}
-                    </p>
-                  </div>
-                  <div className="text-left shrink-0">
-                    <p className="font-bold text-aegean-800">{formatMoney(e.amount, e.currency)}</p>
-                    <p className="text-[10px] text-aegean-300">{e.category}</p>
-                  </div>
-                </Card>
+              <Card key={e.id} className="p-3.5 flex items-center gap-2">
                 <button
                   onClick={() => setConfirmDelete(e.id)}
                   disabled={deletingId === e.id}
-                  className="absolute top-1/2 -translate-y-1/2 left-2 p-2 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100"
+                  className="shrink-0 p-1.5 -ml-1 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                   aria-label="מחיקה"
                 >
-                  <TrashIcon className="w-5 h-5 text-red-500" />
+                  <TrashIcon className="w-4 h-4 text-red-500" />
                 </button>
-              </div>
+                <Avatar name={e.paidBy} size={32} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-aegean-900 truncate">{e.title}</p>
+                  <p className="text-xs text-aegean-400">
+                    {e.paidBy} שילמה · מתחלק בין {e.splitBetween.length}
+                  </p>
+                </div>
+                <div className="text-left shrink-0">
+                  <p className="font-bold text-aegean-800">{formatMoney(e.amount, e.currency)}</p>
+                  <p className="text-[10px] text-aegean-300">{e.category}</p>
+                </div>
+              </Card>
             ))}
         </div>
       )}
