@@ -110,10 +110,20 @@ export default function ExpensesScreen() {
                 <button
                   onClick={() => setConfirmDelete(e.id)}
                   disabled={deletingId === e.id}
-                  className="shrink-0 p-1.5 -ml-1 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ef4444',
+                    opacity: deletingId === e.id ? 0.5 : 1,
+                  }}
                   aria-label="מחיקה"
                 >
-                  <TrashIcon className="w-4 h-4 text-red-500" />
+                  <TrashIcon className="w-4 h-4" style={{ color: '#ef4444' }} />
                 </button>
                 <Avatar name={e.paidBy} size={32} />
                 <div className="flex-1 min-w-0">
